@@ -56,6 +56,7 @@ def ensure_playwright_browsers():
 
 def _install_playwright_chromium():
     """进程内安装 Playwright Chromium 浏览器"""
+    import sys
     try:
         from playwright._impl.__main__ import main as _pw_main
     except ImportError:
