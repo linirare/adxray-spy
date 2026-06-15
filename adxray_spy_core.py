@@ -58,7 +58,7 @@ def _install_playwright_chromium():
     """进程内安装 Playwright Chromium 浏览器"""
     import sys
     try:
-        from playwright._impl.__main__ import main as _pw_main
+        from playwright.__main__ import main as _pw_main
     except ImportError:
         # 回退方案：通过 subprocess 调用（非 PyInstaller 环境）
         import subprocess
