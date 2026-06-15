@@ -15,8 +15,8 @@ OUTPUT_DIR = Path.cwd() / "output"
 
 
 def ensure_playwright_browsers():
-    """确保 Playwright Chromium 已安装（检查文件，不 launch）"""
-    import os, subprocess, sys
+    """确保 Playwright Chromium 已安装（进程内安装，避免 PyInstaller subprocess 问题）"""
+    import os, sys
     from pathlib import Path
 
     # 关键：设置 PLAYWRIGHT_BROWSERS_PATH 指向标准路径，
@@ -45,21 +45,36 @@ def ensure_playwright_browsers():
 
     if not installed:
         print("首次运行：正在下载 Chromium 浏览器（约 200MB）...")
-        creation_flags = 0
-        startupinfo = None
-        if sys.platform == "win32":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            creation_flags = subprocess.CREATE_NO_WINDOW
-        subprocess.run(
-            [sys.executable, "-m", "playwright", "install", "chromium"],
-            check=True, startupinfo=startupinfo, creationflags=creation_flags,
-        )
+        # 进程内调用 playwright install，不走 subprocess（PyInstaller 下 subprocess 不可用）
+        _install_playwright_chromium()
         print("下载完成！")
 
     sentinel.parent.mkdir(parents=True, exist_ok=True)
     sentinel.touch()
     return True
+
+
+def _install_playwright_chromium():
+    """进程内安装 Playwright Chromium 浏览器"""
+    try:
+        from playwright._impl.__main__ import main as _pw_main
+    except ImportError:
+        # 回退方案：通过 subprocess 调用（非 PyInstaller 环境）
+        import subprocess
+        subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            check=True,
+        )
+        return
+
+    old_argv = sys.argv
+    sys.argv = ["playwright", "install", "chromium"]
+    try:
+        _pw_main()
+    except SystemExit:
+        pass  # playwright main 可能调用 sys.exit，忽略
+    finally:
+        sys.argv = old_argv
 
 
 class ADXRaySpy:
