@@ -1,0 +1,20 @@
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Output reports
+output/
+
+# Browser data
+.adxray_spy/
