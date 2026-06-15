@@ -124,11 +124,8 @@ class ADXRaySpy:
             pass
 
     def is_logged_in(self):
-        """判断 ADXRay 是否已登录"""
+        """判断 ADXRay 是否已登录（仅检查当前页面，不导航）"""
         try:
-            self.page.goto(ADXRAY_URL, timeout=30000, wait_until="domcontentloaded")
-            self.page.wait_for_timeout(5000)
-
             body = self.page.inner_text("body")
 
             # 否定检测：登录页特征
@@ -151,8 +148,17 @@ class ADXRaySpy:
         except Exception:
             return False
 
+    def check_login(self):
+        """导航到 ADXRay 并检查登录状态"""
+        try:
+            self.page.goto(ADXRAY_URL, timeout=30000, wait_until="domcontentloaded")
+            self.page.wait_for_timeout(5000)
+            return self.is_logged_in()
+        except Exception:
+            return False
+
     def wait_for_login(self, timeout_seconds=300):
-        """等待用户手动登录 ADXRay"""
+        """等待用户手动登录 ADXRay（不打断用户操作）"""
         print("请在浏览器中登录 ADXRay（你有 5 分钟时间）...")
         deadline = time.time() + timeout_seconds
         while time.time() < deadline:
@@ -280,7 +286,7 @@ class ADXRaySpy:
         return product
 
     def get_product_from_search(self, game_name):
-        """搜索并返回最佳匹配产品（自动选素材数最多的）"""
+        """搜索并返回产品列表（取第一个，通常最匹配）"""
         results = self.search_game(game_name)
         if not results:
             return None
@@ -291,7 +297,6 @@ class ADXRaySpy:
         print(f"  找到 {len(results)} 个匹配产品:")
         for i, r in enumerate(results):
             print(f"    [{i}] ID={r['id']}")
-        # 默认选第一个（通常较匹配）
         return results[0]
 
     # ----------------------------------------------------------------
@@ -935,7 +940,7 @@ def run(game_name: str, session_name="adx", output_dir=None) -> str:
         spy.launch(headless=False)
 
         # 检查登录
-        if not spy.is_logged_in():
+        if not spy.check_login():
             print("需要登录 ADXRay...")
             if not spy.wait_for_login():
                 raise Exception("登录超时，请重试")

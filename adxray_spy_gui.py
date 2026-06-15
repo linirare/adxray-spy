@@ -132,6 +132,18 @@ class ADXRaySpyGUI:
         now = datetime.now().strftime("%H:%M:%S")
         print(f"[{now}] {msg}")
 
+    def _safe_msgbox(self, func, title, msg):
+        """在主线程弹消息框（线程安全）"""
+        import queue
+        q = queue.Queue()
+        def _do():
+            try:
+                q.put(func(title, msg))
+            except:
+                q.put(None)
+        self.window.after(0, _do)
+        return q.get()
+
     def _ensure_browser_closed(self):
         """安全关闭上一个浏览器，释放 user_data_dir"""
         old = self.spy
@@ -173,7 +185,7 @@ class ADXRaySpyGUI:
                 spy = ADXRaySpy(self.session_name)
                 self.spy = spy
                 spy.launch(headless=True)
-                ok = spy.is_logged_in()
+                ok = spy.check_login()
                 spy.close()
                 if self.spy is spy:
                     self.spy = None
@@ -240,7 +252,7 @@ class ADXRaySpyGUI:
                 self.spy = spy
                 spy.launch(headless=False)
 
-                if not spy.is_logged_in():
+                if not spy.check_login():
                     self._log("Need ADXRay login...")
                     if not spy.wait_for_login():
                         raise Exception("Login timeout")
@@ -287,11 +299,11 @@ class ADXRaySpyGUI:
                     msg += f"\nReports:\n" + "\n".join(ok_paths)
                 if fail_names:
                     msg += f"\n\nFailed: {', '.join(fail_names)}"
-                messagebox.showinfo("Summary", msg)
+                self._safe_msgbox(messagebox.showinfo, "Summary", msg)
 
             except Exception as e:
                 self._log(f"Error: {e}")
-                messagebox.showerror("Error", str(e))
+                self._safe_msgbox(messagebox.showerror, "Error", str(e))
             finally:
                 if self.spy:
                     self.spy.close()
